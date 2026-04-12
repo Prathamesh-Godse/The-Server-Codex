@@ -1,140 +1,143 @@
-# Linux & WordPress Server Setup Guide
+# Production WordPress Server on Ubuntu 24.04
 
-A complete, hands-on documentation of building a hardened, performance-optimised WordPress hosting environment from scratch on **Ubuntu 24.04 LTS**. Written as a personal reference and structured as a book — each chapter covers one layer of the stack, from Linux fundamentals through to a fully operational, multi-site WordPress server.
-
----
-
-## About This Guide
-
-This guide is written for anyone who wants to understand **not just what to run, but why** — every command, configuration directive, and permission decision is explained in context. It assumes no prior Linux server experience, but does not hold back on the technical detail.
-
-| | |
-|---|---|
-| **OS** | Ubuntu 24.04 LTS (Noble Numbat) |
-| **Web Server** | Nginx |
-| **Database** | MariaDB |
-| **Language Runtime** | PHP with PHP-FPM pools |
-| **CMS** | WordPress |
-| **SSL** | Let's Encrypt via Certbot |
-| **DNS / CDN** | Cloudflare |
+A fully documented, step-by-step guide to building a hardened, performance-optimised WordPress hosting environment on Ubuntu 24.04 LTS using Nginx, MariaDB, and PHP-FPM. Designed to host multiple isolated WordPress sites on a single VPS with free SSL, server-side caching, and Cloudflare DNS.
 
 ---
 
 ## Goals
 
-- Google PageSpeed score of **97–100%**
-- **A+** SSL rating and **A(+)** HTTP security header rating
-- Multiple WordPress sites, each isolated via **PHP-FPM pools**
-- **Wildcard SSL certificates** via Let's Encrypt
-- Server-side caching at the Nginx level
-- Fully hardened HTTP headers and file permissions
+| Target | Result |
+|--------|--------|
+| Google PageSpeed | **97–100%** |
+| SSL Rating (SSL Labs) | **A+** |
+| HTTP Header Rating | **A / A+** |
+| Multi-site isolation | Per-site PHP-FPM pools |
+| SSL certificates | Wildcard via Let's Encrypt / Certbot |
+| DDoS mitigation | Cloudflare edge protection |
 
 ---
 
-## How to Read This Guide
+## Stack
 
-Start with the **[Table of Contents](./index.md)** for a full overview and direct links to every chapter.
-
-Chapters are designed to be read in order — later chapters build on concepts introduced earlier. Jump-in points by experience level:
-
-- New to Linux → **Chapter 1**
-- Comfortable with Linux, starting fresh → **Chapter 6**
-- Server provisioned and hardened → **Chapter 11**
-- OS optimised, ready to install the stack → **Chapter 17**
-- Stack installed, ready to configure Nginx/MariaDB → **Chapter 21**
-- Nginx/MariaDB tuned, ready to configure PHP and site structure → **Chapter 26**
-- PHP configured, ready to install WordPress → **Chapter 31**
-
----
-
-## Contents at a Glance
-
-### Part I — Linux Fundamentals
-
-| Ch | Title | Topics |
-|----|-------|--------|
-| 1 | [Project Overview](./chapters/01-nginx-wordpress-server.md) | Stack, goals, infrastructure, config principles |
-| 2 | [Linux Essentials](./chapters/02-linux-essentials.md) | Distributions, shell, SSH, terminal, `ls` |
-| 3 | [Linux File System](./chapters/03-linux-file-system.md) | Directory hierarchy, naming, `pwd`, `cd`, paths |
-| 4 | [Users, Groups & Permissions](./chapters/04-users-groups-permissions.md) | User types, `sudo`, ownership, `chmod`, `chown` |
-| 5 | [Essential Linux Skills](./chapters/05-essential-linux-skills.md) | `nano`, `apt`, `systemctl`, SSH keys, bash, cron |
-
-### Part II — Server Build & Hardening
-
-| Ch | Title | Topics |
-|----|-------|--------|
-| 6 | [Local Machine Setup](./chapters/06-local-setup-and-server-os.md) | Local vs remote, why Ubuntu 24.04, local tooling |
-| 7 | [Server Provisioning](./chapters/07-server-provisioning.md) | Specs, Ubuntu Pro, migration strategy, Vultr |
-| 8 | [First Login & Hardening Intro](./chapters/08-first-login-and-hardening-intro.md) | Root SSH, fingerprints, known_hosts |
-| 9 | [Server Hardening](./chapters/09-server-hardening.md) | Password, non-root user, sudo, root SSH disabled |
-| 10 | [sudo, Updates & SSH Key Auth](./chapters/10-hardening-sudo-updates-ssh-keys.md) | sudo, kernel updates, key auth, password disabled |
-
-### Part III — Security Layers & OS Optimisation
-
-| Ch | Title | Topics |
-|----|-------|--------|
-| 11 | [SSH Config & Server Updates](./chapters/11-ssh-config-and-server-updates.md) | SSH alias, apt update cycle |
-| 12 | [Firewall: UFW & Cloud](./chapters/12-firewall-ufw-and-cloud.md) | UFW, default deny, Vultr cloud firewall |
-| 13 | [Fail2Ban](./chapters/13-fail2ban.md) | Installation, jail.local, SSH jail, monitoring |
-| 14 | [Harden & Optimise OS — Part 1](./chapters/14-harden-and-optimize-server-distribution.md) | Timezone, swap file, fstab |
-| 15 | [Harden & Optimise OS — Part 2](./chapters/15-harden-and-optimize-server-distribution-2.md) | sysctl, shared memory, IPv6, network tuning |
-| 16 | [Congestion Control & File Limits](./chapters/16-congestion-control-file-access-open-file-limits.md) | BBR, noatime, PAM limits |
-
-### Part IV — Web Stack Installation & Configuration
-
-| Ch | Title | Topics |
-|----|-------|--------|
-| 17 | [DNS & Cloudflare Setup](./chapters/17-dns-cloudflare-domain-setup.md) | Nameservers, A record, CNAME |
-| 18 | [Installing Nginx, MariaDB & PHP](./chapters/18-installing-nginx-mariadb-php.md) | Ondrej PPA, LEMP stack, PHP extensions |
-| 19 | [Server Mail with msmtp](./chapters/19-server-mail-msmtp.md) | msmtp, Gmail SMTP, PHP mail() |
-| 20 | [Nginx Configuration Files](./chapters/20-nginx-configuration-files.md) | Directives, contexts, location modifiers, try_files |
-
-### Part V — Nginx & MariaDB Hardening and Tuning
-
-| Ch | Title | Topics |
-|----|-------|--------|
-| 21 | [Hardening & Optimising Nginx](./chapters/21-nginx-harden-and-optimize.md) | main/events context, includes/ directory, six conf files |
-| 22 | [Wiring Nginx Include Files](./chapters/22-nginx-conf-wiring-and-reload.md) | Populating files, http context rewrite, error fixes |
-| 23 | [Nginx Open File Limits & Bash Aliases](./chapters/23-nginx-open-file-limits-and-bash-aliases.md) | worker_rlimit_nofile 45000, /proc/PID/limits |
-| 24 | [Harden MariaDB](./chapters/24-harden-mariadb.md) | mysql_secure_installation, Unix socket auth |
-| 25 | [Optimise MariaDB](./chapters/25-optimize-mariadb.md) | Performance Schema, InnoDB tuning, log retention |
-
-### Part VI — PHP Hardening, Tuning & Site Preparation
-
-| Ch | Title | Topics |
-|----|-------|--------|
-| 26 | [MySQLTuner & MariaDB Open File Limits](./chapters/26-mysqltuner-mariadb-open-file-limits.md) | MySQLTuner, systemd drop-in LimitNOFILE=40000 |
-| 27 | [Harden & Optimise PHP](./chapters/27-harden-and-optimize-php.md) | server_override.ini, hardening + optimisation directives |
-| 28 | [Optimise PHP: OPcache & Open File Limit](./chapters/28-optimize-php-opcache-open-file-limit.md) | OPcache theory, rlimit_files=32768, worker verification |
-| 29 | [Web Root Directory Structure](./chapters/29-web-root-directory-structure.md) | /var/www layout, mkdir -p, rmdir, rm -rf, mv |
-| 30 | [Nginx Server Blocks, Browser Caching & FastCGI](./chapters/30-nginx-server-blocks-browser-caching-fastcgi.md) | Virtual host, include files, symlink, live error demo |
-
-### Part VII — WordPress Installation & Hardening
-
-| Ch | Title | Topics |
-|----|-------|--------|
-| 31 | [Nginx Server Block: FastCGI & Browser Caching](./chapters/31-nginx-server-block-fastcgi-browser-caching.md) | Full implementation session, path typo fix, 403 verification |
-| 32 | [MariaDB Setup & WordPress Prep](./chapters/32-mariadb-wordpress-installation-prep.md) | SQL fundamentals, random credentials, DB/user creation, rsync deploy |
-| 33 | [WordPress: wp-config.php, Deployment & Setup](./chapters/33-wordpress-config-deployment-setup.md) | wp-config.php in full, browser wizard, first-login housekeeping |
-| 34 | [WordPress Hardening Introduction](./chapters/34-wordpress-hardening-introduction.md) | Hardening areas overview, log inspection, attack traffic in access log |
-| 35 | [PHP-FPM Pool Isolation](./chapters/35-php-fpm-pool-isolation.md) | Dedicated pool user, socket, resource limits, Nginx socket update |
+| Component | Role |
+|-----------|------|
+| **Ubuntu 24.04 LTS** | Operating system |
+| **Nginx** | Web server and reverse proxy |
+| **MariaDB** | Database server |
+| **PHP 8.3 + PHP-FPM** | Server-side scripting with per-site pools |
+| **WordPress** | CMS |
+| **Certbot + Let's Encrypt** | Free SSL/TLS certificates with auto-renewal |
+| **Cloudflare** | DNS management, CDN, and DDoS mitigation |
+| **Fail2Ban** | SSH brute-force protection |
+| **UFW** | Host-level firewall |
 
 ---
 
-## Status
+## Documentation Index
 
-- [x] Part I — Linux Fundamentals (Ch 1–5)
-- [x] Part II — Server Build & Hardening (Ch 6–10)
-- [x] Part III — Security Layers & OS Optimisation (Ch 11–16)
-- [x] Part IV — Web Stack Installation & Configuration (Ch 17–20)
-- [x] Part V — Nginx & MariaDB Hardening and Tuning (Ch 21–25)
-- [x] Part VI — PHP Hardening, Tuning & Site Preparation (Ch 26–30)
-- [x] Part VII — WordPress Installation & Hardening (Ch 31–35)
-- [ ] Part VIII — SSL, Security Headers & Cloudflare Proxy
-- [ ] Part IX — Performance Tuning & Caching
+### Part 1 — Linux & Infrastructure Foundations
+- [01 — Project Overview](01-nginx-wordpress-server.md)
+- [02 — Linux Essentials](02-linux-essentials.md)
+- [03 — Linux File System](03-linux-file-system.md)
+- [04 — Users, Groups & Permissions](04-users-groups-permissions.md)
+- [05 — Essential Linux Skills](05-essential-linux-skills.md)
+
+### Part 2 — Server Provisioning & Initial Setup
+- [06 — Local Setup & Server OS](06-local-setup-and-server-os.md)
+- [07 — Server Provisioning](07-server-provisioning.md)
+- [08 — First Login & Hardening Intro](08-first-login-and-hardening-intro.md)
+
+### Part 3 — Server Hardening
+- [09 — Server Hardening Overview](09-server-hardening.md)
+- [10 — Sudo, Updates & SSH Keys](10-hardening-sudo-updates-ssh-keys.md)
+- [11 — SSH Config & Server Updates](11_ssh_config_and_server_updates.md)
+- [12 — Firewall (UFW) & Cloud Firewalls](12_firewall_ufw_and_cloud.md)
+- [13 — Fail2Ban](13_fail2ban.md)
+- [14 — Harden & Optimise Server Distribution](14_harden_and_optimize_server_distribution.md)
+- [15 — Harden & Optimise Server Distribution (Part 2)](15_harden_and_optimize_server_distribution_2.md)
+- [16 — Congestion Control, File Access & Open File Limits](16_congestion_control_file_access_open_file_limits.md)
+
+### Part 4 — DNS & Domain Setup
+- [17 — DNS, Cloudflare & Domain Setup](17_dns_cloudflare_domain_setup.md)
+
+### Part 5 — Installing the LEMP Stack
+- [18 — Installing Nginx, MariaDB & PHP](18_installing_nginx_mariadb_php.md)
+- [19 — Server Mail (msmtp)](19_server_mail_msmtp.md)
+
+### Part 6 — Nginx Configuration
+- [20 — Nginx Configuration Files](20_nginx_configuration_files.md)
+- [21 — Harden & Optimise Nginx](21_nginx_harden_and_optimize.md)
+- [22 — Nginx Config Wiring & Reload](22_nginx_conf_wiring_and_reload.md)
+- [23 — Nginx Open File Limits & Bash Aliases](23-section-11-nginx-open-file-limits-and-bash-aliases.md)
+
+### Part 7 — MariaDB Configuration
+- [24 — Harden MariaDB](section-24-harden-mariadb.md)
+- [25 — Optimise MariaDB](section-25-optimize-mariadb.md)
+- [26 — MySQLTuner & Open File Limits](section-26-mysqltuner-mariadb-open-file-limits.md)
+
+### Part 8 — PHP Configuration
+- [27 — Harden & Optimise PHP](section-27-harden-and-optimize-php.md)
+- [28 — OPcache & Open File Limits](section-28-optimize-php-opcache-open-file-limit.md)
+
+### Part 9 — Web Root & Server Blocks
+- [29 — Web Root Directory Structure](section-29-web-root-directory-structure.md)
+- [30 — Nginx Server Blocks, Browser Caching & FastCGI](section-30-nginx-server-blocks-browser-caching-fastcgi.md)
+- [31 — Nginx Server Block: FastCGI & Browser Caching (Detail)](31_nginx_server_block_fastcgi_browser_caching.md)
+
+### Part 10 — WordPress Installation
+- [32 — MariaDB & WordPress Installation Prep](32_mariadb_wordpress_installation_prep.md)
+- [33 — WordPress Config & Deployment Setup](33_wordpress_config_deployment_setup.md)
+
+### Part 11 — WordPress Hardening
+- [34 — WordPress Hardening Introduction](34_wordpress_hardening_introduction.md)
+- [35 — PHP-FPM Pool Isolation](35_php_fpm_pool_isolation.md)
+- [36 — PHP-FPM Pool Hardening](36_php_fpm_pool_hardening.md)
+- [37 — WordPress Hardened Permissions](37_wordpress_hardened_permissions.md)
+- [38 — open_basedir](section-38-open-basedir.md)
+
+### Part 12 — SSL & HTTPS
+- [39 — SSL Certificates (Certbot & Let's Encrypt)](section-39-ssl-certificates.md)
+- [41 — HTTPS Verification & Certbot Renewal](41-https-verification-certbot-renewal.md)
+
+### Part 13 — Security Headers & Nginx Hardening
+- [42 — HTTP Response Headers](42_http_response_headers.md)
+- [43 — Nginx WordPress Security Directives](43_nginx_wordpress_security_directives.md)
+- [44 — Nginx DDoS Protection](44_nginx_ddos_protection.md)
+- [45 — Nginx Rate Limiting](45_nginx_rate_limiting.md)
+- [46 — Web Application Firewall](46_web_application_firewall.md)
+- [47 — Hotlinking Protection](47_hotlinking_protection.md)
+- [48 — Disallow File Modifications](48_disallow_file_mods.md)
+- [49 — Database Hardening](49_database_hardening.md)
+- [50 — REST API Hardening](50_rest_api_hardening.md)
+
+### Part 14 — WordPress Optimisation
+- [51 — WordPress Optimisation Overview](51-wordpress-optimization-overview.md)
+- [52 — Post Revisions Policy](52-post-revisions-policy.md)
+- [53 — Setting Max Memory Limit](53-setting-max-memory-limit.md)
+
+---
+
+## Prerequisites
+
+- A publicly accessible VPS (Ubuntu 24.04 LTS) — local VMs cannot be used as SSL issuance requires a public IP
+- A registered domain with DNS managed through Cloudflare
+- Basic familiarity with: SSH, Linux CLI, `nano`, `systemctl`, and `apt`
+
+---
+
+## Configuration Principles
+
+- Each config file is written once, completely from scratch — no incremental patching.
+- Each component (Nginx, PHP, MariaDB) is configured as a cohesive unit.
+- All changes are followed by a service reload/restart and a status check.
+- Per-site isolation is enforced via dedicated PHP-FPM pools.
 
 ---
 
 ## License
 
-Personal reference documentation. Not licensed for redistribution.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+## Contributing
+
+Contributions, corrections, and improvements are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
